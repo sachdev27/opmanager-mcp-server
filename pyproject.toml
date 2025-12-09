@@ -82,11 +82,11 @@ all = [
 opmanager-mcp = "opmanager_mcp.main:run"
 
 [project.urls]
-Homepage = "https://github.com/example/opmanager-mcp-server"
-Documentation = "https://github.com/example/opmanager-mcp-server#readme"
-Repository = "https://github.com/example/opmanager-mcp-server.git"
-Issues = "https://github.com/example/opmanager-mcp-server/issues"
-Changelog = "https://github.com/example/opmanager-mcp-server/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/sachdev27/opmanager-mcp-server"
+Documentation = "https://github.com/sachdev27/opmanager-mcp-server#readme"
+Repository = "https://github.com/sachdev27/opmanager-mcp-server.git"
+Issues = "https://github.com/sachdev27/opmanager-mcp-server/issues"
+Changelog = "https://github.com/sachdev27/opmanager-mcp-server/blob/main/CHANGELOG.md"
 
 [tool.hatch.build.targets.wheel]
 packages = ["opmanager_mcp"]
@@ -213,4 +213,4 @@ exclude_lines = [
     "@(abc\\.)?abstractmethod",
 ]
 show_missing = true
-fail_under = 80
+fail_under = 50

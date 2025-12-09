@@ -1,96 +1,153 @@
 # OpManager MCP Server
 
-A Model Context Protocol (MCP) server for ManageEngine OpManager REST API integration. This server enables AI assistants like Claude to interact with your OpManager infrastructure through natural language.
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Tests](https://img.shields.io/badge/tests-32%20passed-brightgreen.svg)]()
+[![MCP SDK](https://img.shields.io/badge/MCP%20SDK-1.23+-purple.svg)](https://github.com/modelcontextprotocol/python-sdk)
 
-## Features
+A **credential-less** Model Context Protocol (MCP) server for ManageEngine OpManager REST API integration. This server enables AI assistants like Claude to interact with your OpManager infrastructure through natural language.
 
-- **Full OpManager API Coverage**: 85+ endpoints covering devices, alarms, dashboards, discovery, and more
-- **Dynamic Tool Generation**: Automatically generates MCP tools from OpenAPI specification
-- **Multiple Transports**: Supports stdio (Claude Desktop) and HTTP/SSE (n8n, web clients)
-- **Secure Authentication**: API key-based authentication
-- **Comprehensive Logging**: Structured logging with JSON and colored output options
-- **Docker Support**: Ready-to-use Docker and Docker Compose configurations
+## ✨ Key Features
 
-## Installation
+- **🔐 Credential-less Design**: No hardcoded API keys - users provide `host` and `apiKey` per request
+- **🔄 SSL Auto-Detection**: Port 8061 → HTTPS, Port 8060 → HTTP (with manual override)
+- **📡 85+ API Endpoints**: Full OpManager API coverage for devices, alarms, dashboards, discovery, and more
+- **🛠 Dynamic Tool Generation**: Automatically generates MCP tools from OpenAPI specification
+- **🌐 Multiple Transports**: Supports stdio (Claude Desktop) and HTTP/SSE (n8n, web clients)
+- **🐳 Docker Ready**: Containerized deployment with Docker and Docker Compose
 
-### From PyPI (when published)
+## 🚀 Quick Start
+
+### Installation
 
 ```bash
-pip install opmanager-mcp-server
-```
-
-### From Source
-
-```bash
-git clone https://github.com/example/opmanager-mcp-server.git
+# Clone the repository
+git clone https://github.com/sachdev27/opmanager-mcp-server.git
 cd opmanager-mcp-server
-pip install -e .
-```
 
-### With HTTP Server Support
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-```bash
+# Install the package
 pip install -e ".[http]"
 ```
 
-### With All Dependencies
+### Start the HTTP Server
 
 ```bash
-pip install -e ".[all]"
+uvicorn opmanager_mcp.http_server:app --host 0.0.0.0 --port 3000
 ```
 
-## Configuration
+### Test a Tool Call
+
+```bash
+curl -X POST http://localhost:3000/call \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "opmanager_get_allDevices",
+    "arguments": {
+      "host": "opmanager.example.com",
+      "apiKey": "your-api-key-here",
+      "port": 8061
+    }
+  }'
+```
+
+## 📋 Configuration
 
 ### Environment Variables
 
-Create a `.env` file based on `.env.example`:
+Create a `.env` file (optional - for server defaults only):
 
 ```bash
 cp .env.example .env
 ```
 
-Configure the following variables:
-
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `OPMANAGER_HOST` | OpManager server hostname | `localhost` |
-| `OPMANAGER_PORT` | OpManager server port | `8060` |
-| `OPMANAGER_USE_SSL` | Use HTTPS connection | `false` |
-| `OPMANAGER_API_KEY` | API key for authentication | Required |
-| `OPMANAGER_VERIFY_SSL` | Verify SSL certificates | `true` |
-| `OPMANAGER_TIMEOUT` | Request timeout in seconds | `30` |
 | `MCP_SERVER_LOG_LEVEL` | Logging level | `INFO` |
-| `MCP_SERVER_LOG_JSON` | Use JSON log format | `false` |
+| `ALLOWED_HTTP_METHODS` | Allowed HTTP methods for tools | `GET,POST,PUT,DELETE,PATCH` |
+| `LOCAL_OPENAPI_SPEC_PATH` | Path to OpenAPI spec | bundled `openapi.json` |
 
-### Getting Your API Key
+> **Note**: `OPMANAGER_HOST` and `OPMANAGER_API_KEY` are NOT configured server-side. Users provide these per-request for security.
+
+### Getting Your OpManager API Key
 
 1. Log in to OpManager web console
 2. Navigate to **Settings** → **REST API**
 3. Generate a new API key
-4. Copy the key to your `.env` file
+4. Use this key in your tool calls
 
-## Usage
+## 🔧 Tool Parameters
 
-### Claude Desktop Integration
+Every tool accepts these connection parameters:
 
-Add to your Claude Desktop configuration (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `host` | ✅ Yes | OpManager server hostname |
+| `apiKey` | ✅ Yes | API key for authentication |
+| `port` | No | Server port (default: 8060) |
+| `use_ssl` | No | Force SSL (auto-detected from port) |
+| `verify_ssl` | No | Verify SSL certificates (default: true) |
 
-```json
-{
-  "mcpServers": {
-    "opmanager": {
-      "command": "opmanager-mcp",
-      "env": {
-        "OPMANAGER_HOST": "your-opmanager-host",
-        "OPMANAGER_PORT": "8060",
-        "OPMANAGER_API_KEY": "your-api-key"
-      }
-    }
-  }
-}
+### SSL Auto-Detection
+
+- **Port 8061**: Automatically uses HTTPS
+- **Port 8060**: Automatically uses HTTP
+- Override with `use_ssl: true/false` if needed
+
+## 🌐 HTTP API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/health` | GET | Health check with tool count |
+| `/tools` | GET | List all available tools |
+| `/sse` | GET | SSE connection for MCP |
+| `/messages` | POST | MCP message handler |
+| `/call` | POST | Direct tool invocation |
+
+### Health Check
+
+```bash
+curl http://localhost:3000/health
+# {"status":"healthy","tool_count":60}
 ```
 
-Or if running from source:
+### List Tools
+
+```bash
+curl http://localhost:3000/tools | jq '.tools[].name'
+```
+
+## 🤖 n8n Integration
+
+1. Start the HTTP server on port 3000
+2. In n8n, add an **AI Agent** node with **MCP Client** tool
+3. Configure the MCP Client:
+   - **SSE URL**: `http://localhost:3000/sse`
+   - **Messages URL**: `http://localhost:3000/messages`
+
+### Example System Prompt for n8n
+
+```
+You are an IT operations assistant with access to OpManager for network monitoring.
+
+When using OpManager tools, always include:
+- host: "opmanager.company.com"
+- apiKey: "your-api-key"
+- port: 8061 (for HTTPS)
+
+Available operations:
+- List all devices: opmanager_get_allDevices
+- Get device details: opmanager_get_device (requires deviceName)
+- List alarms: opmanager_get_alarms
+- Acknowledge alarm: opmanager_add_alarmNotes
+```
+
+## 🖥 Claude Desktop Integration
+
+Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json`):
 
 ```json
 {
@@ -100,193 +157,123 @@ Or if running from source:
       "args": ["-m", "opmanager_mcp.main"],
       "cwd": "/path/to/opmanager-mcp-server",
       "env": {
-        "OPMANAGER_HOST": "your-opmanager-host",
-        "OPMANAGER_PORT": "8060",
-        "OPMANAGER_API_KEY": "your-api-key"
+        "LOCAL_OPENAPI_SPEC_PATH": "/path/to/opmanager-mcp-server/openapi.json"
       }
     }
   }
 }
 ```
 
-### n8n Integration
+> **Note**: With Claude Desktop, you'll tell Claude your OpManager host and API key in conversation, and it will include them in tool calls.
 
-1. Start the HTTP server:
-
-```bash
-uvicorn opmanager_mcp.http_server:app --host 0.0.0.0 --port 3000
-```
-
-2. In n8n, add an MCP Client node with:
-   - **SSE URL**: `http://localhost:3000/sse`
-   - **Messages URL**: `http://localhost:3000/messages`
-
-### HTTP API Endpoints
-
-When running the HTTP server:
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/health` | GET | Health check |
-| `/tools` | GET | List available tools |
-| `/sse` | GET | SSE connection for MCP |
-| `/messages` | POST | MCP message handler |
-| `/call` | POST | Direct tool invocation |
-
-### Direct Tool Call Example
-
-```bash
-curl -X POST http://localhost:3000/call \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "opmanager_list_devices",
-    "arguments": {}
-  }'
-```
-
-## Available Tools
-
-The server exposes 85+ tools organized by category:
-
-### Alarms
-- `opmanager_list_alarms` - List alarms with filtering options
-- `opmanager_get_alarm_details` - Get details for a specific alarm
-- `opmanager_acknowledge_alarm` - Acknowledge an alarm
-- `opmanager_clear_alarm` - Clear an alarm
-- And more...
+## 🛠 Available Tools (60+ GET operations)
 
 ### Devices
-- `opmanager_list_devices` - List all devices
-- `opmanager_get_device` - Get device details
-- `opmanager_add_device` - Add a new device
-- `opmanager_delete_device` - Delete a device
-- And more...
+- `opmanager_get_allDevices` - List all monitored devices
+- `opmanager_get_device` - Get device details by name
+- `opmanager_get_deviceAvailability` - Device availability history
+
+### Alarms
+- `opmanager_get_alarms` - List alarms with filtering
+- `opmanager_get_alarmDetails` - Get alarm details
+- `opmanager_add_alarmNotes` - Add notes/acknowledge alarm
 
 ### Discovery
-- `opmanager_start_discovery` - Start network discovery
-- `opmanager_get_discovery_status` - Check discovery progress
-- And more...
+- `opmanager_get_discoveryStatus` - Check discovery progress
+- `opmanager_add_discovery` - Start network discovery
 
-### Dashboards
-- `opmanager_list_dashboards` - List dashboards
-- `opmanager_get_dashboard_widgets` - Get dashboard widgets
-- And more...
+### Reports & Dashboards
+- `opmanager_get_allDashboards` - List all dashboards
+- `opmanager_get_scheduledReports` - List scheduled reports
 
-### Reports
-- `opmanager_generate_report` - Generate reports
-- `opmanager_schedule_report` - Schedule report generation
-- And more...
+### And more...
+Run `curl http://localhost:3000/tools` to see all available tools.
 
-Run `opmanager-mcp` and use the `tools/list` capability to see all available tools.
+## 🐳 Docker
 
-## Docker
-
-### Build the Image
+### Build and Run
 
 ```bash
 docker build -t opmanager-mcp-server .
+docker run -d -p 3000:3000 --name opmanager-mcp opmanager-mcp-server
 ```
 
-### Run with Docker
-
-```bash
-docker run -d \
-  --name opmanager-mcp \
-  -p 3000:3000 \
-  -e OPMANAGER_HOST=your-opmanager-host \
-  -e OPMANAGER_PORT=8060 \
-  -e OPMANAGER_API_KEY=your-api-key \
-  opmanager-mcp-server
-```
-
-### Run with Docker Compose
+### Docker Compose
 
 ```bash
 docker-compose up -d
 ```
 
-## Development
+## 🧪 Development
 
-### Setup Development Environment
+### Run Tests
 
 ```bash
-# Clone the repository
-git clone https://github.com/example/opmanager-mcp-server.git
-cd opmanager-mcp-server
-
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install development dependencies
+# Install dev dependencies
 pip install -e ".[dev]"
 
-# Install pre-commit hooks
-pre-commit install
-```
-
-### Running Tests
-
-```bash
 # Run all tests
 pytest
 
 # Run with coverage
-pytest --cov=opmanager_mcp --cov-report=html
+pytest --cov=opmanager_mcp --cov-report=term-missing
 
-# Run specific test file
-pytest tests/test_server.py
+# Current: 32 tests, 50% coverage
 ```
 
 ### Code Quality
 
 ```bash
-# Format code
+# Format
 black opmanager_mcp tests
 isort opmanager_mcp tests
 
 # Lint
 ruff check opmanager_mcp tests
 
-# Type checking
+# Type check
 mypy opmanager_mcp
 ```
 
-### Regenerating OpenAPI Spec
-
-If you have an updated OpManager HTML documentation:
+### Regenerate OpenAPI Spec
 
 ```bash
 python generate_openapi.py
 ```
 
-This will regenerate `openapi.json` from `rest-api.html`.
-
-## Architecture
+## 📁 Project Structure
 
 ```
-opmanager_mcp/
-├── __init__.py          # Package exports
-├── api_client.py        # HTTP client for OpManager API
-├── config.py            # Configuration management
-├── exceptions.py        # Custom exceptions
-├── http_server.py       # HTTP/SSE server for n8n
-├── logging_config.py    # Logging configuration
-├── main.py              # CLI entry point
-├── server.py            # MCP server implementation
-└── tool_generator.py    # OpenAPI to MCP tool converter
+opmanager-mcp-server/
+├── opmanager_mcp/
+│   ├── __init__.py          # Package exports
+│   ├── api_client.py        # HTTP client for OpManager API
+│   ├── config.py            # Configuration management
+│   ├── exceptions.py        # Custom exceptions
+│   ├── http_server.py       # HTTP/SSE server (Pure ASGI)
+│   ├── logging_config.py    # Logging configuration
+│   ├── main.py              # CLI entry point
+│   ├── server.py            # MCP server implementation
+│   └── tool_generator.py    # OpenAPI to MCP tool converter
+├── tests/
+│   ├── conftest.py          # Test fixtures
+│   ├── test_api_client.py   # API client tests
+│   ├── test_config.py       # Config tests
+│   ├── test_http_server.py  # HTTP server tests
+│   ├── test_server.py       # MCP server tests
+│   └── test_tool_generator.py # Tool generation tests
+├── openapi.json             # OpManager OpenAPI specification
+├── pyproject.toml           # Project configuration
+├── Dockerfile               # Container image
+├── docker-compose.yml       # Compose configuration
+└── README.md                # This file
 ```
 
-## License
+## 📄 License
 
 MIT License - see [LICENSE](LICENSE) for details.
 
-## Contributing
+## 🙏 Acknowledgments
 
-Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) for details.
-
-## Acknowledgments
-
-- Inspired by the [Dell Unity MCP Server](https://github.com/example/dell-unity-mcp-server)
-- Built with the [Model Context Protocol SDK](https://github.com/modelcontextprotocol/python-sdk)
-- OpManager REST API documentation by [ManageEngine](https://www.manageengine.com/network-monitoring/)
+- Built with [Model Context Protocol SDK](https://github.com/modelcontextprotocol/python-sdk)
+- OpManager REST API by [ManageEngine](https://www.manageengine.com/network-monitoring/)

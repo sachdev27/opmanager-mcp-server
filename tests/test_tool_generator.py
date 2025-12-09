@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 import pytest
 
 
 class TestToolGenerator:
-    """Tests for the OpenAPI to MCP tool generator."""
+    """Tests for the tool generator."""
 
     def test_generate_tools_from_spec(self, sample_openapi_spec):
         """Test generating tools from OpenAPI spec."""
@@ -17,10 +15,11 @@ class TestToolGenerator:
         generator = ToolGenerator(sample_openapi_spec)
         tools = generator.generate_tools()
 
+        # Should generate tools for paths with GET method
         assert isinstance(tools, list)
 
     def test_tool_name_generation(self):
-        """Test that tool names are properly formatted."""
+        """Test that tool names are generated correctly."""
         from opmanager_mcp.tool_generator import ToolGenerator
 
         spec = {
@@ -30,7 +29,8 @@ class TestToolGenerator:
                 "/api/json/device/listDevices": {
                     "get": {
                         "operationId": "listDevices",
-                        "summary": "List devices",
+                        "summary": "List all devices",
+                        "parameters": [],
                         "responses": {"200": {"description": "Success"}},
                     }
                 }
@@ -40,12 +40,12 @@ class TestToolGenerator:
         generator = ToolGenerator(spec)
         tools = generator.generate_tools()
 
-        assert len(tools) > 0
-        tool = tools[0]
-        assert tool["name"].startswith("opmanager_")
+        assert len(tools) == 1
+        # Tool name should be the operationId
+        assert tools[0]["name"] == "listDevices"
 
     def test_tool_includes_parameters(self):
-        """Test that tools include parameter definitions."""
+        """Test that tools include parameters."""
         from opmanager_mcp.tool_generator import ToolGenerator
 
         spec = {
@@ -55,14 +55,14 @@ class TestToolGenerator:
                 "/api/json/device/getDevice": {
                     "get": {
                         "operationId": "getDevice",
-                        "summary": "Get device by ID",
+                        "summary": "Get device by name",
                         "parameters": [
                             {
-                                "name": "deviceId",
+                                "name": "deviceName",
                                 "in": "query",
                                 "required": True,
-                                "schema": {"type": "integer"},
-                                "description": "Device ID",
+                                "description": "The device name",
+                                "schema": {"type": "string"},
                             }
                         ],
                         "responses": {"200": {"description": "Success"}},
@@ -75,25 +75,27 @@ class TestToolGenerator:
         tools = generator.generate_tools()
 
         assert len(tools) == 1
-        tool = tools[0]
-        assert "inputSchema" in tool
-        assert "properties" in tool["inputSchema"]
-        assert "deviceId" in tool["inputSchema"]["properties"]
+        input_schema = tools[0]["inputSchema"]
+        
+        # Should include host and apiKey as required
+        assert "host" in input_schema["properties"]
+        assert "apiKey" in input_schema["properties"]
+        # Should include the deviceName parameter
+        assert "deviceName" in input_schema["properties"]
 
     def test_tool_description_includes_category(self):
-        """Test that tool descriptions include category information."""
+        """Test that tool descriptions include category info."""
         from opmanager_mcp.tool_generator import ToolGenerator
 
         spec = {
             "openapi": "3.0.0",
             "info": {"title": "Test API", "version": "1.0.0"},
-            "tags": [{"name": "device", "description": "Device operations"}],
             "paths": {
-                "/api/json/device/listDevices": {
+                "/api/json/alarm/listAlarms": {
                     "get": {
-                        "operationId": "listDevices",
-                        "tags": ["device"],
-                        "summary": "List all devices",
+                        "operationId": "listAlarms",
+                        "summary": "List all alarms",
+                        "parameters": [],
                         "responses": {"200": {"description": "Success"}},
                     }
                 }
@@ -104,17 +106,52 @@ class TestToolGenerator:
         tools = generator.generate_tools()
 
         assert len(tools) == 1
-        tool = tools[0]
-        # Check that description exists
-        assert "description" in tool
-        assert len(tool["description"]) > 0
+        # Description should include category context for alarms
+        assert "alarm" in tools[0]["description"].lower()
+
+    def test_allowed_methods_filter(self):
+        """Test that only allowed methods generate tools."""
+        from opmanager_mcp.tool_generator import ToolGenerator
+
+        spec = {
+            "openapi": "3.0.0",
+            "info": {"title": "Test API", "version": "1.0.0"},
+            "paths": {
+                "/api/json/device/listDevices": {
+                    "get": {
+                        "operationId": "listDevices",
+                        "summary": "List all devices",
+                    },
+                    "post": {
+                        "operationId": "addDevice",
+                        "summary": "Add a device",
+                    },
+                }
+            },
+        }
+
+        # Only GET methods
+        generator = ToolGenerator(spec, allowed_methods=["GET"])
+        tools = generator.generate_tools()
+
+        tool_names = [t["name"] for t in tools]
+        assert "listDevices" in tool_names
+        assert "addDevice" not in tool_names
+
+        # Both GET and POST
+        generator = ToolGenerator(spec, allowed_methods=["GET", "POST"])
+        tools = generator.generate_tools()
+
+        tool_names = [t["name"] for t in tools]
+        assert "listDevices" in tool_names
+        assert "addDevice" in tool_names
 
 
 class TestParameterHandling:
     """Tests for parameter handling in tool generation."""
 
     def test_enum_parameter(self):
-        """Test handling of enum parameters."""
+        """Test that enum parameters are handled correctly."""
         from opmanager_mcp.tool_generator import ToolGenerator
 
         spec = {
@@ -129,11 +166,12 @@ class TestParameterHandling:
                             {
                                 "name": "severity",
                                 "in": "query",
-                                "schema": {
-                                    "type": "string",
-                                    "enum": ["critical", "major", "minor", "warning"],
-                                },
+                                "required": False,
                                 "description": "Alarm severity",
+                                "schema": {
+                                    "type": "integer",
+                                    "enum": [1, 2, 3, 4, 5],
+                                },
                             }
                         ],
                         "responses": {"200": {"description": "Success"}},
@@ -146,9 +184,8 @@ class TestParameterHandling:
         tools = generator.generate_tools()
 
         assert len(tools) == 1
-        tool = tools[0]
-        param_schema = tool["inputSchema"]["properties"]["severity"]
-        assert "enum" in param_schema
+        severity_prop = tools[0]["inputSchema"]["properties"]["severity"]
+        assert "enum" in severity_prop
 
     def test_required_parameters(self):
         """Test that required parameters are marked correctly."""
@@ -164,11 +201,19 @@ class TestParameterHandling:
                         "summary": "Get device",
                         "parameters": [
                             {
-                                "name": "deviceId",
+                                "name": "deviceName",
                                 "in": "query",
                                 "required": True,
-                                "schema": {"type": "integer"},
-                            }
+                                "description": "Device name",
+                                "schema": {"type": "string"},
+                            },
+                            {
+                                "name": "includeDetails",
+                                "in": "query",
+                                "required": False,
+                                "description": "Include details",
+                                "schema": {"type": "boolean"},
+                            },
                         ],
                         "responses": {"200": {"description": "Success"}},
                     }
@@ -179,7 +224,11 @@ class TestParameterHandling:
         generator = ToolGenerator(spec)
         tools = generator.generate_tools()
 
-        assert len(tools) == 1
-        tool = tools[0]
-        assert "required" in tool["inputSchema"]
-        assert "deviceId" in tool["inputSchema"]["required"]
+        required = tools[0]["inputSchema"]["required"]
+        # host and apiKey are always required
+        assert "host" in required
+        assert "apiKey" in required
+        # deviceName should be required
+        assert "deviceName" in required
+        # includeDetails should NOT be required
+        assert "includeDetails" not in required

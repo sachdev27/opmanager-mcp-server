@@ -34,6 +34,9 @@ def sample_openapi_spec() -> dict[str, Any]:
 @pytest.fixture
 def mock_env_vars() -> Generator[dict[str, str], None, None]:
     """Set up mock environment variables."""
+    # Use the actual openapi.json path for tests
+    spec_path = str(Path(__file__).parent.parent / "openapi.json")
+
     env_vars = {
         "OPMANAGER_HOST": "test-host",
         "OPMANAGER_PORT": "8060",
@@ -42,6 +45,7 @@ def mock_env_vars() -> Generator[dict[str, str], None, None]:
         "OPMANAGER_VERIFY_SSL": "false",
         "OPMANAGER_TIMEOUT": "30",
         "MCP_SERVER_LOG_LEVEL": "DEBUG",
+        "LOCAL_OPENAPI_SPEC_PATH": spec_path,
     }
 
     with patch.dict(os.environ, env_vars, clear=False):

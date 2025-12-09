@@ -11,17 +11,33 @@ import pytest
 class TestOpManagerConfig:
     """Tests for OpManager configuration."""
 
-    def test_default_config_values(self, mock_env_vars):
+    def test_default_config_values(self):
         """Test that default values are used when not specified."""
         from opmanager_mcp.config import OpManagerConfig
 
-        config = OpManagerConfig(api_key="test-key")
+        config = OpManagerConfig()
 
         assert config.host == "localhost"
         assert config.port == 8060
-        assert config.use_ssl is False
-        assert config.verify_ssl is True
-        assert config.timeout == 30
+        assert config.use_https is False
+        assert config.tls_verify is False
+        assert config.api_key is None
+
+    def test_config_with_values(self):
+        """Test configuration with explicit values."""
+        from opmanager_mcp.config import OpManagerConfig
+
+        config = OpManagerConfig(
+            host="example.com",
+            port=8061,
+            use_https=True,
+            api_key="test-key",
+        )
+
+        assert config.host == "example.com"
+        assert config.port == 8061
+        assert config.use_https is True
+        assert config.api_key == "test-key"
 
     def test_config_from_env(self, mock_env_vars):
         """Test loading configuration from environment variables."""
@@ -31,47 +47,30 @@ class TestOpManagerConfig:
 
         assert config.opmanager.host == "test-host"
         assert config.opmanager.port == 8060
-        assert config.opmanager.api_key == "test-api-key"
-
-    def test_base_url_http(self, mock_env_vars):
-        """Test base URL generation for HTTP."""
-        from opmanager_mcp.config import OpManagerConfig
-
-        config = OpManagerConfig(
-            host="example.com",
-            port=8060,
-            use_ssl=False,
-            api_key="test-key",
-        )
-
-        assert config.base_url == "http://example.com:8060"
-
-    def test_base_url_https(self, mock_env_vars):
-        """Test base URL generation for HTTPS."""
-        from opmanager_mcp.config import OpManagerConfig
-
-        config = OpManagerConfig(
-            host="example.com",
-            port=443,
-            use_ssl=True,
-            api_key="test-key",
-        )
-
-        assert config.base_url == "https://example.com:443"
 
 
 class TestServerConfig:
     """Tests for server configuration."""
 
-    def test_default_server_config(self, mock_env_vars):
+    def test_default_server_config(self):
         """Test default server configuration values."""
         from opmanager_mcp.config import ServerConfig
 
         config = ServerConfig()
 
-        assert config.name == "opmanager-mcp-server"
+        assert config.port == 3000
         assert config.log_level == "INFO"
         assert config.log_json is False
+
+    def test_server_config_allowed_methods(self):
+        """Test allowed HTTP methods configuration."""
+        from opmanager_mcp.config import ServerConfig
+
+        config = ServerConfig()
+
+        # Default should include all methods
+        assert "GET" in config.allowed_http_methods
+        assert isinstance(config.allowed_http_methods, list)
 
 
 class TestLoadConfig:
@@ -85,13 +84,12 @@ class TestLoadConfig:
 
         assert config.opmanager is not None
         assert config.server is not None
-        assert config.opmanager.api_key == "test-api-key"
 
-    def test_load_config_missing_api_key(self):
-        """Test that missing API key raises an error."""
+    def test_load_config_with_spec_path(self, mock_env_vars):
+        """Test loading config with OpenAPI spec path."""
         from opmanager_mcp.config import load_config
-        from pydantic import ValidationError
 
-        with patch.dict(os.environ, {}, clear=True):
-            with pytest.raises(ValidationError):
-                load_config()
+        # The mock_env_vars fixture sets LOCAL_OPENAPI_SPEC_PATH
+        config = load_config()
+
+        assert config.opmanager.local_spec_path is not None
