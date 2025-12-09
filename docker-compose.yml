@@ -10,16 +10,15 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - OPMANAGER_HOST=${OPMANAGER_HOST:-localhost}
-      - OPMANAGER_PORT=${OPMANAGER_PORT:-8060}
-      - OPMANAGER_USE_SSL=${OPMANAGER_USE_SSL:-false}
-      - OPMANAGER_API_KEY=${OPMANAGER_API_KEY}
-      - OPMANAGER_VERIFY_SSL=${OPMANAGER_VERIFY_SSL:-true}
-      - OPMANAGER_TIMEOUT=${OPMANAGER_TIMEOUT:-30}
+      # Server configuration only (credential-less design)
+      # Allowed HTTP methods (comma-separated) - GET,POST,PUT,DELETE,PATCH are supported
       - MCP_SERVER_LOG_LEVEL=${MCP_SERVER_LOG_LEVEL:-INFO}
       - MCP_SERVER_LOG_JSON=${MCP_SERVER_LOG_JSON:-true}
+      - ALLOWED_HTTP_METHODS=${ALLOWED_HTTP_METHODS:-GET}
+      # Optional: Custom OpenAPI spec path
+      # - LOCAL_OPENAPI_SPEC_PATH=/app/openapi.json
     healthcheck:
-      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:3000/health').raise_for_status()"]
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -28,15 +27,7 @@ services:
       - ./logs:/app/logs
     networks:
       - mcp-network
-    # Uncomment if OpManager is on the same Docker network
-    # extra_hosts:
-    #   - "opmanager:host-gateway"
 
 networks:
   mcp-network:
     driver: bridge
-
-# Optional: Mount custom OpenAPI spec
-# volumes:
-#   openapi-spec:
-#     driver: local
