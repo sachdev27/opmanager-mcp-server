@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 
 class TestToolGenerator:
     """Tests for the tool generator."""
@@ -76,7 +74,7 @@ class TestToolGenerator:
 
         assert len(tools) == 1
         input_schema = tools[0]["inputSchema"]
-        
+
         # Should include host and apiKey as required
         assert "host" in input_schema["properties"]
         assert "apiKey" in input_schema["properties"]

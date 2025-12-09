@@ -4,15 +4,17 @@ from __future__ import annotations
 
 import json
 import os
+
+# Add the parent directory to path for imports
+import sys
+from collections.abc import AsyncGenerator, Generator
 from pathlib import Path
-from typing import Any, AsyncGenerator, Generator
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 import pytest_asyncio
 
-# Add the parent directory to path for imports
-import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 
@@ -56,6 +58,7 @@ def mock_env_vars() -> Generator[dict[str, str], None, None]:
 def config(mock_env_vars: dict[str, str]):
     """Create a test configuration."""
     from opmanager_mcp.config import load_config
+
     return load_config()
 
 

@@ -15,11 +15,12 @@ Example:
 from __future__ import annotations
 
 import json
-from typing import Any, Callable, Awaitable
+from collections.abc import Awaitable, Callable
+from typing import Any
 
-from mcp.server.sse import SseServerTransport
 from mcp.server import NotificationOptions
 from mcp.server.models import InitializationOptions
+from mcp.server.sse import SseServerTransport
 
 from .config import load_config
 from .logging_config import get_logger, setup_logging
@@ -53,35 +54,39 @@ class CORSMiddleware:
         async def send_with_cors(message: dict[str, Any]) -> None:
             if message["type"] == "http.response.start":
                 headers = list(message.get("headers", []))
-                headers.extend([
-                    (b"access-control-allow-origin", b"*"),
-                    (b"access-control-allow-methods", b"GET, POST, OPTIONS"),
-                    (b"access-control-allow-headers", b"*"),
-                    (b"access-control-expose-headers", b"*"),
-                ])
+                headers.extend(
+                    [
+                        (b"access-control-allow-origin", b"*"),
+                        (b"access-control-allow-methods", b"GET, POST, OPTIONS"),
+                        (b"access-control-allow-headers", b"*"),
+                        (b"access-control-expose-headers", b"*"),
+                    ]
+                )
                 message = {**message, "headers": headers}
             await send(message)
 
         await self.app(scope, receive, send_with_cors)
 
     async def _send_cors_preflight(self, send: Send) -> None:
-        await send({
-            "type": "http.response.start",
-            "status": 204,
-            "headers": [
-                (b"access-control-allow-origin", b"*"),
-                (b"access-control-allow-methods", b"GET, POST, OPTIONS"),
-                (b"access-control-allow-headers", b"*"),
-                (b"access-control-max-age", b"86400"),
-            ],
-        })
+        await send(
+            {
+                "type": "http.response.start",
+                "status": 204,
+                "headers": [
+                    (b"access-control-allow-origin", b"*"),
+                    (b"access-control-allow-methods", b"GET, POST, OPTIONS"),
+                    (b"access-control-allow-headers", b"*"),
+                    (b"access-control-max-age", b"86400"),
+                ],
+            }
+        )
         await send({"type": "http.response.body", "body": b""})
 
 
 class MCPHttpServer:
     """Pure ASGI HTTP server for MCP with SSE support.
-    
-    This uses pure ASGI instead of Starlette Routes because MCP's 
+
+    This uses pure ASGI instead of Starlette Routes because MCP's
     SseServerTransport manages responses directly via ASGI, which is
     incompatible with Starlette's Route abstraction that requires
     returning Response objects.
@@ -105,17 +110,19 @@ class MCPHttpServer:
             json_format=config.server.log_json,
             log_file=config.server.log_file,
         )
-        
+
         logger.info("Initializing OpManager MCP HTTP Server")
-        
+
         self.mcp_server = OpManagerMCPServer(config)
         await self.mcp_server.initialize()
-        
+
         # Create SSE transport - the path must match the messages endpoint
         self.sse_transport = SseServerTransport("/messages")
-        
+
         self._initialized = True
-        logger.info("Server initialized", extra={"tool_count": len(self.mcp_server.tools)})
+        logger.info(
+            "Server initialized", extra={"tool_count": len(self.mcp_server.tools)}
+        )
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         """ASGI application entry point."""
@@ -147,7 +154,9 @@ class MCPHttpServer:
         else:
             await self._send_json(send, {"error": "Not found"}, status=404)
 
-    async def _handle_lifespan(self, scope: Scope, receive: Receive, send: Send) -> None:
+    async def _handle_lifespan(
+        self, scope: Scope, receive: Receive, send: Send
+    ) -> None:
         """Handle ASGI lifespan events."""
         while True:
             message = await receive()
@@ -166,15 +175,20 @@ class MCPHttpServer:
     async def _handle_health(self, scope: Scope, receive: Receive, send: Send) -> None:
         """Health check endpoint."""
         try:
-            await self._send_json(send, {
-                "status": "healthy",
-                "server": "opmanager-mcp-server",
-                "version": self.VERSION,
-                "initialized": self._initialized,
-                "tool_count": len(self.mcp_server.tools) if self.mcp_server else 0,
-            })
+            await self._send_json(
+                send,
+                {
+                    "status": "healthy",
+                    "server": "opmanager-mcp-server",
+                    "version": self.VERSION,
+                    "initialized": self._initialized,
+                    "tool_count": len(self.mcp_server.tools) if self.mcp_server else 0,
+                },
+            )
         except Exception as e:
-            await self._send_json(send, {"status": "unhealthy", "error": str(e)}, status=503)
+            await self._send_json(
+                send, {"status": "unhealthy", "error": str(e)}, status=503
+            )
 
     async def _handle_tools(self, scope: Scope, receive: Receive, send: Send) -> None:
         """List available tools."""
@@ -182,9 +196,11 @@ class MCPHttpServer:
             tools = [
                 {
                     "name": tool["name"],
-                    "description": tool["description"][:200] + "..."
-                    if len(tool.get("description", "")) > 200
-                    else tool.get("description", ""),
+                    "description": (
+                        tool["description"][:200] + "..."
+                        if len(tool.get("description", "")) > 200
+                        else tool.get("description", "")
+                    ),
                     "inputSchema": tool.get("inputSchema", {}),
                 }
                 for tool in self.mcp_server.tools
@@ -197,7 +213,7 @@ class MCPHttpServer:
     async def _handle_sse(self, scope: Scope, receive: Receive, send: Send) -> None:
         """SSE endpoint for MCP communication."""
         logger.info("New SSE connection request")
-        
+
         try:
             async with self.sse_transport.connect_sse(scope, receive, send) as streams:
                 logger.info("SSE connection established")
@@ -217,13 +233,13 @@ class MCPHttpServer:
             logger.error(f"SSE error: {e}", exc_info=True)
             # Don't send error response - SSE stream already started
 
-    async def _handle_messages(self, scope: Scope, receive: Receive, send: Send) -> None:
+    async def _handle_messages(
+        self, scope: Scope, receive: Receive, send: Send
+    ) -> None:
         """Handle POST messages - MCP transport manages response directly."""
         if self.sse_transport is None:
             await self._send_json(
-                send, 
-                {"error": "No SSE transport initialized"}, 
-                status=500
+                send, {"error": "No SSE transport initialized"}, status=500
             )
             return
 
@@ -250,7 +266,9 @@ class MCPHttpServer:
             arguments = data.get("arguments", {})
 
             if not tool_name:
-                await self._send_json(send, {"error": "Tool name is required"}, status=400)
+                await self._send_json(
+                    send, {"error": "Tool name is required"}, status=400
+                )
                 return
 
             # Execute the tool
@@ -273,25 +291,26 @@ class MCPHttpServer:
             await self._send_json(send, {"error": str(e), "isError": True}, status=500)
 
     async def _send_json(
-        self, 
-        send: Send, 
-        data: dict[str, Any], 
-        status: int = 200
+        self, send: Send, data: dict[str, Any], status: int = 200
     ) -> None:
         """Send a JSON response."""
         body = json.dumps(data).encode()
-        await send({
-            "type": "http.response.start",
-            "status": status,
-            "headers": [
-                (b"content-type", b"application/json"),
-                (b"content-length", str(len(body)).encode()),
-            ],
-        })
-        await send({
-            "type": "http.response.body",
-            "body": body,
-        })
+        await send(
+            {
+                "type": "http.response.start",
+                "status": status,
+                "headers": [
+                    (b"content-type", b"application/json"),
+                    (b"content-length", str(len(body)).encode()),
+                ],
+            }
+        )
+        await send(
+            {
+                "type": "http.response.body",
+                "body": body,
+            }
+        )
 
 
 # Create the ASGI app with CORS middleware

@@ -193,7 +193,9 @@ def load_config(env_file: str | None = None) -> Config:
         )
 
         # Parse allowed methods
-        allowed_methods_str = os.getenv("ALLOWED_HTTP_METHODS", "GET,POST,PUT,DELETE,PATCH")
+        allowed_methods_str = os.getenv(
+            "ALLOWED_HTTP_METHODS", "GET,POST,PUT,DELETE,PATCH"
+        )
         allowed_methods = [m.strip().upper() for m in allowed_methods_str.split(",")]
 
         # Build server config

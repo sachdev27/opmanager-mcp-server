@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -16,7 +15,10 @@ class TestOpManagerMCPServer:
         """Test server initialization."""
         from opmanager_mcp.server import OpManagerMCPServer
 
-        with patch("opmanager_mcp.tool_generator.load_openapi_spec", return_value=sample_openapi_spec):
+        with patch(
+            "opmanager_mcp.tool_generator.load_openapi_spec",
+            return_value=sample_openapi_spec,
+        ):
             server = OpManagerMCPServer(config)
             await server.initialize()
 
@@ -85,7 +87,9 @@ class TestToolExecution:
             mock_client.__aenter__ = AsyncMock(return_value=mock_client)
             mock_client.__aexit__ = AsyncMock(return_value=None)
 
-            with patch("opmanager_mcp.server.OpManagerAPIClient", return_value=mock_client):
+            with patch(
+                "opmanager_mcp.server.OpManagerAPIClient", return_value=mock_client
+            ):
                 result = await server._execute_tool(
                     "listDevices",
                     {"host": "test-host", "apiKey": "test-key"},
@@ -97,8 +101,8 @@ class TestToolExecution:
     @pytest.mark.asyncio
     async def test_execute_tool_missing_credentials(self, config):
         """Test executing tool without credentials raises error."""
-        from opmanager_mcp.server import OpManagerMCPServer
         from opmanager_mcp.exceptions import InvalidToolArgumentsError
+        from opmanager_mcp.server import OpManagerMCPServer
 
         spec = {
             "openapi": "3.0.0",
@@ -126,8 +130,8 @@ class TestToolExecution:
     @pytest.mark.asyncio
     async def test_execute_unknown_tool(self, config):
         """Test executing an unknown tool raises error."""
-        from opmanager_mcp.server import OpManagerMCPServer
         from opmanager_mcp.exceptions import InvalidToolArgumentsError
+        from opmanager_mcp.server import OpManagerMCPServer
 
         spec = {
             "openapi": "3.0.0",
