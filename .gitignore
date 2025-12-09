@@ -157,3 +157,9 @@ Thumbs.db
 *.log
 logs/
 .secrets/
+
+# Development files (not needed in repo)
+rest-api.html
+overview.json
+system-message.md
+system-message-simple.md
