@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 
 class TestToolGenerator:
     """Tests for the tool generator."""

@@ -310,7 +310,7 @@ class OpManagerAPIClient:
             self.client = None
             self._logger.debug("HTTP client closed")
 
-    async def __aenter__(self) -> "OpManagerAPIClient":
+    async def __aenter__(self) -> OpManagerAPIClient:
         """Async context manager entry."""
         return self
 
@@ -353,7 +353,7 @@ async def test_connection(
     ) as client:
         try:
             # Try to list devices as a connection test
-            result = await client.execute_operation(
+            await client.execute_operation(
                 "/api/json/device/listDevices",
                 "GET",
             )

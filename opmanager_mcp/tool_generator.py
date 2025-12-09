@@ -285,14 +285,14 @@ class ToolGenerator:
                     param_hints.append(f"- {name}{marker}")
 
             if param_hints:
-                description += f"\n\nKey parameters:\n" + "\n".join(param_hints)
+                description += "\n\nKey parameters:\n" + "\n".join(param_hints)
 
         return description
 
     def _generate_input_schema(
         self,
         operation: dict[str, Any],
-        path: str,
+        _path: str,
     ) -> dict[str, Any]:
         """Generate JSON Schema for tool input.
 
@@ -450,7 +450,7 @@ class ToolGenerator:
         Returns:
             HTTP method (defaults to GET).
         """
-        for path, path_item in self.spec.get("paths", {}).items():
+        for _path, path_item in self.spec.get("paths", {}).items():
             for method in self.allowed_methods:
                 if method in path_item:
                     operation = path_item[method]
