@@ -86,7 +86,9 @@ class TestOpManagerAPIClient:
         )
 
         # Mock the internal method that makes requests
-        with patch.object(client, "_make_request", new_callable=AsyncMock) as mock_make_request:
+        with patch.object(
+            client, "_make_request", new_callable=AsyncMock
+        ) as mock_make_request:
             mock_make_request.return_value = mock_response
 
             # Ensure client is initialized

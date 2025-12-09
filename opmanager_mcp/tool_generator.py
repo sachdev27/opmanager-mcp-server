@@ -70,9 +70,7 @@ def load_openapi_spec(spec_path: str) -> dict[str, Any]:
             spec = json.loads(content)
 
         if not isinstance(spec, dict):
-            raise OpenAPIParseError(
-                spec_path, message="OpenAPI spec must be an object"
-            )
+            raise OpenAPIParseError(spec_path, message="OpenAPI spec must be an object")
 
         logger.info(
             f"Loaded OpenAPI spec: {spec.get('info', {}).get('title', 'Unknown')}",

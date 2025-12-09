@@ -100,7 +100,9 @@ class EnvironmentVariableError(ConfigurationError):
             message: Optional custom message.
             details: Optional additional details.
         """
-        default_message = f"Environment variable '{variable_name}' is missing or invalid"
+        default_message = (
+            f"Environment variable '{variable_name}' is missing or invalid"
+        )
         super().__init__(message or default_message, details)
         self.variable_name = variable_name
 

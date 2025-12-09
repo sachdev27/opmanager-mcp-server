@@ -172,15 +172,13 @@ class OpManagerAPIClient:
 
         for attempt in range(self.max_retries + 1):
             try:
-                response = await self._make_request(
-                    client, method, url, params, body
-                )
+                response = await self._make_request(client, method, url, params, body)
                 return self._parse_response(response)
 
             except (httpx.TimeoutException, httpx.ConnectError) as e:
                 last_error = e
                 if attempt < self.max_retries:
-                    wait_time = (2 ** attempt) * 0.5  # Exponential backoff
+                    wait_time = (2**attempt) * 0.5  # Exponential backoff
                     self._logger.warning(
                         f"Request failed, retrying in {wait_time}s (attempt {attempt + 1}/{self.max_retries})",
                         extra={"error": str(e)},
@@ -269,9 +267,7 @@ class OpManagerAPIClient:
         # Handle rate limiting
         if response.status_code == 429:
             retry_after = response.headers.get("Retry-After")
-            raise RateLimitError(
-                retry_after=int(retry_after) if retry_after else None
-            )
+            raise RateLimitError(retry_after=int(retry_after) if retry_after else None)
 
         # Handle other errors
         if response.status_code >= 400:

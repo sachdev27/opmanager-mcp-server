@@ -26,7 +26,7 @@ class TestMCPHttpServer:
         from opmanager_mcp.http_server import MCPHttpServer
 
         server = MCPHttpServer()
-        
+
         # Mock initialize to avoid loading actual spec
         with patch.object(server, "initialize", new_callable=AsyncMock) as mock_init:
             server._initialized = True
@@ -36,19 +36,20 @@ class TestMCPHttpServer:
             # Create mock ASGI components
             scope = {"type": "http", "path": "/health", "method": "GET"}
             receive = AsyncMock()
-            
+
             # Capture what gets sent
             sent_messages = []
+
             async def send(message):
                 sent_messages.append(message)
-            
+
             await server._handle_health(scope, receive, send)
-            
+
             # Check response was sent
             assert len(sent_messages) == 2
             assert sent_messages[0]["type"] == "http.response.start"
             assert sent_messages[0]["status"] == 200
-            
+
             # Parse body
             body = json.loads(sent_messages[1]["body"])
             assert body["status"] == "healthy"
@@ -63,19 +64,24 @@ class TestMCPHttpServer:
         server._initialized = True
         server.mcp_server = MagicMock()
         server.mcp_server.tools = [
-            {"name": "listDevices", "description": "List all devices", "inputSchema": {}},
+            {
+                "name": "listDevices",
+                "description": "List all devices",
+                "inputSchema": {},
+            },
             {"name": "listAlarms", "description": "List all alarms", "inputSchema": {}},
         ]
 
         scope = {"type": "http", "path": "/tools", "method": "GET"}
         receive = AsyncMock()
-        
+
         sent_messages = []
+
         async def send(message):
             sent_messages.append(message)
-        
+
         await server._handle_tools(scope, receive, send)
-        
+
         body = json.loads(sent_messages[1]["body"])
         assert body["count"] == 2
         assert len(body["tools"]) == 2
@@ -83,13 +89,14 @@ class TestMCPHttpServer:
     @pytest.mark.asyncio
     async def test_server_call_endpoint(self, mock_env_vars):
         """Test direct tool call endpoint."""
-        from opmanager_mcp.http_server import MCPHttpServer
         import mcp.types as types
+
+        from opmanager_mcp.http_server import MCPHttpServer
 
         server = MCPHttpServer()
         server._initialized = True
         server.mcp_server = MagicMock()
-        
+
         # Mock the _execute_tool method
         mock_result = types.CallToolResult(
             content=[types.TextContent(type="text", text='{"devices": []}')],
@@ -98,28 +105,29 @@ class TestMCPHttpServer:
         server.mcp_server._execute_tool = AsyncMock(return_value=mock_result)
 
         # Create request body
-        request_body = json.dumps({
-            "name": "listDevices",
-            "arguments": {"host": "test", "apiKey": "key"}
-        }).encode()
+        request_body = json.dumps(
+            {"name": "listDevices", "arguments": {"host": "test", "apiKey": "key"}}
+        ).encode()
 
         scope = {"type": "http", "path": "/call", "method": "POST"}
-        
+
         # Mock receive to return the body
         receive_calls = 0
+
         async def receive():
             nonlocal receive_calls
             receive_calls += 1
             if receive_calls == 1:
                 return {"body": request_body, "more_body": False}
             return {}
-        
+
         sent_messages = []
+
         async def send(message):
             sent_messages.append(message)
-        
+
         await server._handle_call(scope, receive, send)
-        
+
         body = json.loads(sent_messages[1]["body"])
         assert body["isError"] is False
         assert len(body["content"]) == 1
@@ -141,13 +149,14 @@ class TestCORSMiddleware:
 
         scope = {"type": "http", "path": "/sse", "method": "OPTIONS"}
         receive = AsyncMock()
-        
+
         sent_messages = []
+
         async def send(message):
             sent_messages.append(message)
-        
+
         await middleware(scope, receive, send)
-        
+
         # Should send 204 with CORS headers
         assert sent_messages[0]["status"] == 204
         headers = dict(sent_messages[0]["headers"])
@@ -160,7 +169,7 @@ class TestCORSMiddleware:
 
         # Track if app was called
         app_called = False
-        
+
         async def test_app(scope, receive, send):
             nonlocal app_called
             app_called = True
@@ -171,13 +180,14 @@ class TestCORSMiddleware:
 
         scope = {"type": "http", "path": "/health", "method": "GET"}
         receive = AsyncMock()
-        
+
         sent_messages = []
+
         async def send(message):
             sent_messages.append(message)
-        
+
         await middleware(scope, receive, send)
-        
+
         assert app_called
         # Check CORS headers were added
         headers = dict(sent_messages[0]["headers"])
