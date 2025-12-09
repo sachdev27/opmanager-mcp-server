@@ -1,0 +1,331 @@
+{
+  "rootFolder": "/Users/sachdevs/opmanager-mcp-server",
+  "analyzedAt": "2025-12-09T11:09:34.098Z",
+  "rootStructure": [
+    {
+      "name": ".gitignore",
+      "type": "file",
+      "size": 1577,
+      "lines": 160
+    },
+    {
+      "name": "Dockerfile",
+      "type": "file",
+      "size": 1363,
+      "lines": 58
+    },
+    {
+      "name": "LICENSE",
+      "type": "file",
+      "size": 1090,
+      "lines": 22
+    },
+    {
+      "name": "README.md",
+      "type": "file",
+      "size": 6926,
+      "lines": 293
+    },
+    {
+      "name": "docker-compose.yml",
+      "type": "file",
+      "size": 1172,
+      "lines": 43
+    },
+    {
+      "name": "generate_openapi.py",
+      "type": "file",
+      "size": 21980,
+      "lines": 559
+    },
+    {
+      "name": "openapi.json",
+      "type": "file",
+      "size": 492763,
+      "lines": 12032
+    },
+    {
+      "name": "opmanager_mcp",
+      "type": "dir"
+    },
+    {
+      "name": "overview.json",
+      "type": "file",
+      "size": 8616,
+      "lines": 327
+    },
+    {
+      "name": "pyproject.toml",
+      "type": "file",
+      "size": 4850,
+      "lines": 217
+    },
+    {
+      "name": "requirements.txt",
+      "type": "file",
+      "size": 366,
+      "lines": 21
+    },
+    {
+      "name": "rest-api.html",
+      "type": "file",
+      "size": 803744,
+      "lines": 6171
+    },
+    {
+      "name": "tests",
+      "type": "dir"
+    },
+    {
+      "name": "venv",
+      "type": "dir"
+    }
+  ],
+  "rootFileSnippets": {
+    "Dockerfile": [
+      "# Build stage",
+      "FROM python:3.11-slim as builder",
+      "",
+      "WORKDIR /app",
+      "",
+      "# Install build dependencies",
+      "RUN apt-get update && apt-get install -y --no-install-recommends \\",
+      "build-essential \\",
+      "&& rm -rf /var/lib/apt/lists/*",
+      ""
+    ],
+    "LICENSE": [
+      "MIT License",
+      "",
+      "Copyright (c) 2024 OpManager MCP Server Contributors",
+      "",
+      "Permission is hereby granted, free of charge, to any person obtaining a copy",
+      "of this software and associated documentation files (the \"Software\"), to deal",
+      "in the Software without restriction, including without limitation the rights",
+      "to use, copy, modify, merge, publish, distribute, sublicense, and/or sell",
+      "copies of the Software, and to permit persons to whom the Software is",
+      "furnished to do so, subject to the following conditions:"
+    ],
+    "README.md": [
+      "# OpManager MCP Server",
+      "",
+      "A Model Context Protocol (MCP) server for ManageEngine OpManager REST API integration. This server enables AI assistants like Claude to interact with your OpManager infrastructure through natural language.",
+      "",
+      "## Features",
+      "",
+      "- **Full OpManager API Coverage**: 85+ endpoints covering devices, alarms, dashboards, discovery, and more",
+      "- **Dynamic Tool Generation**: Automatically generates MCP tools from OpenAPI specification",
+      "- **Multiple Transports**: Supports stdio (Claude Desktop) and HTTP/SSE (n8n, web clients)",
+      "- **Secure Authentication**: API key-based authentication"
+    ],
+    "docker-compose.yml": [
+      "version: '3.8'",
+      "",
+      "services:",
+      "opmanager-mcp:",
+      "build:",
+      "context: .",
+      "dockerfile: Dockerfile",
+      "container_name: opmanager-mcp-server",
+      "restart: unless-stopped",
+      "ports:"
+    ],
+    "generate_openapi.py": [
+      "#!/usr/bin/env python3",
+      "\"\"\"",
+      "Script to parse OpManager Plus REST API HTML documentation and generate OpenAPI 3.0 specification.",
+      "\"\"\"",
+      "",
+      "import json",
+      "import re",
+      "from html.parser import HTMLParser",
+      "from pathlib import Path",
+      ""
+    ],
+    "openapi.json": [
+      "{",
+      "\"openapi\": \"3.0.3\",",
+      "\"info\": {",
+      "\"title\": \"OpManager Plus REST API\",",
+      "\"description\": \"REST API for OpManager Plus - Network monitoring and management solution. This API allows integration with 3rd party IT management/service desk software.\",",
+      "\"version\": \"1.0.0\",",
+      "\"contact\": {",
+      "\"name\": \"ManageEngine OpManager Plus\",",
+      "\"url\": \"https://www.manageengine.com/network-monitoring/\"",
+      "}"
+    ],
+    "overview.json": [
+      "{",
+      "\"rootFolder\": \"/Users/sachdevs/opmanager-mcp-server\",",
+      "\"analyzedAt\": \"2025-12-09T10:42:54.869Z\",",
+      "\"rootStructure\": [",
+      "{",
+      "\"name\": \".gitignore\",",
+      "\"type\": \"file\",",
+      "\"size\": 1577,",
+      "\"lines\": 160",
+      "},"
+    ],
+    "pyproject.toml": [
+      "[build-system]",
+      "requires = [\"hatchling\"]",
+      "build-backend = \"hatchling.build\"",
+      "",
+      "[project]",
+      "name = \"opmanager-mcp-server\"",
+      "version = \"1.0.0\"",
+      "description = \"Model Context Protocol (MCP) server for ManageEngine OpManager API integration\"",
+      "readme = \"README.md\"",
+      "license = { text = \"MIT\" }"
+    ],
+    "requirements.txt": [
+      "# Core dependencies",
+      "mcp>=1.0.0",
+      "httpx>=0.25.0",
+      "pydantic>=2.0.0",
+      "pydantic-settings>=2.0.0",
+      "python-dotenv>=1.0.0",
+      "pyyaml>=6.0",
+      "",
+      "# HTTP server (optional - for n8n integration)",
+      "starlette>=0.32.0"
+    ],
+    "rest-api.html": [
+      "<!DOCTYPE html>",
+      "<html lang=\"en\">",
+      "<head>",
+      "<meta charset=\"utf-8\">",
+      "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1, maximum-scale=1, user-scalable=yes\">",
+      "<meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge,chrome=1\">",
+      "<meta name=\"description\" content=\"OpManager Plus offers REST APIs for adding and fetching data from OpManager Plus. Using these APIs, you can integrate OpManager Plus with 3rd party IT management/service desk software. Learn more about OpManager Plus REST APIs | OpManager Plus Help\">",
+      "<meta name=\"keywords\" content=\"OpManager Plus REST API\">",
+      "<link rel=\"icon\" href=\"https://cdn.manageengine.com/sites/meweb/images/favicon.ico\" type=\"image/vnd.microsoft.icon\">",
+      "<link rel=\"canonical\" href=\"https://www.manageengine.com/it-operations-management/help/rest-api-opmanagerplus.html\">"
+    ]
+  },
+  "importantFolders": [
+    {
+      "path": "tests",
+      "category": "tests",
+      "fileCount": 6,
+      "primaryLanguage": "Python"
+    }
+  ],
+  "readmeParagraphs": {
+    "root": "# OpManager MCP Server"
+  },
+  "totals": {
+    "numFiles": 29,
+    "numDirs": 4,
+    "totalSizeBytes": 1453717,
+    "totalLinesOfCode": 3822
+  },
+  "fileCategories": {
+    "other": 7,
+    "documentation": 2,
+    "config": 4,
+    "source": 16
+  },
+  "linesOfCodePerLanguage": {
+    "Python": 3822
+  },
+  "filesPerLanguage": {
+    "Python": 16
+  },
+  "projectTypes": [
+    "Python",
+    "Python (requirements)"
+  ],
+  "frameworks": [],
+  "entryPoints": [
+    "generate_openapi.py"
+  ],
+  "ciCdTools": [
+    "Docker"
+  ],
+  "packageManagers": [
+    "pip"
+  ],
+  "topLevelDirectories": [
+    {
+      "name": "opmanager_mcp",
+      "numFiles": 9,
+      "totalLoc": 2650,
+      "dominantLanguage": "Python"
+    },
+    {
+      "name": "tests",
+      "numFiles": 6,
+      "totalLoc": 613,
+      "dominantLanguage": "Python"
+    }
+  ],
+  "detailedDirectories": [
+    {
+      "path": "opmanager_mcp",
+      "name": "opmanager_mcp",
+      "level": 1,
+      "numFiles": 9,
+      "totalLoc": 2650,
+      "dominantLanguage": "Python",
+      "category": "General",
+      "description": "General module with 9 files (Python)",
+      "subdirectories": []
+    },
+    {
+      "path": "tests",
+      "name": "tests",
+      "level": 1,
+      "numFiles": 6,
+      "totalLoc": 613,
+      "dominantLanguage": "Python",
+      "category": "Testing",
+      "description": "Testing module with 6 files (Python)",
+      "subdirectories": []
+    }
+  ],
+  "architecturalInsights": {
+    "coreApplications": [],
+    "entryPointDetails": [
+      {
+        "path": "../../../generate_openapi.py",
+        "type": "Unknown",
+        "description": ""
+      }
+    ],
+    "serviceArchitecture": {
+      "microservices": [],
+      "monoliths": [],
+      "libraries": []
+    },
+    "layeredArchitecture": {
+      "presentation": [],
+      "business": [],
+      "data": [],
+      "infrastructure": []
+    }
+  },
+  "largeFiles": [],
+  "dependencies": {
+    "production": [
+      "mcp",
+      "httpx",
+      "pydantic",
+      "pydantic-settings",
+      "python-dotenv",
+      "pyyaml",
+      "starlette",
+      "uvicorn",
+      "sse-starlette"
+    ],
+    "development": [],
+    "total": 9
+  },
+  "complexity": {
+    "averageFileSize": 131.79310344827587,
+    "maxFileSize": 0,
+    "nestedDepth": 0,
+    "estimatedComplexity": "low"
+  },
+  "license": "MIT"
+}
