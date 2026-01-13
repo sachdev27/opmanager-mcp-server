@@ -302,14 +302,21 @@ class ToolGenerator:
 
         Returns:
             JSON Schema for input validation.
+
+        Note:
+            Only includes host/apiKey for credentials and actual API parameters.
+            Connection settings (port, use_ssl, verify_ssl) are handled
+            automatically by the server based on host format (host:port)
+            and auto-detection.
         """
         properties: dict[str, Any] = {}
         required: list[str] = []
 
         # Add credential properties (always required)
+        # Host supports format "hostname:port" for custom ports
         properties["host"] = {
             "type": "string",
-            "description": "OpManager host address (e.g., 'opmanager.example.com')",
+            "description": "OpManager host address (e.g., 'opmanager.example.com' or 'opmanager.example.com:8061'). Default port is 8061 (HTTPS).",
         }
         properties["apiKey"] = {
             "type": "string",
@@ -317,21 +324,8 @@ class ToolGenerator:
         }
         required.extend(["host", "apiKey"])
 
-        # Add optional connection parameters
-        properties["port"] = {
-            "type": "integer",
-            "description": "OpManager port (default: 8060 for HTTP, 8061 for HTTPS)",
-            "default": 8060,
-        }
-        properties["use_ssl"] = {
-            "type": "boolean",
-            "description": "Use HTTPS instead of HTTP. Auto-detected from port if not specified (8061=HTTPS, 8060=HTTP)",
-        }
-        properties["verify_ssl"] = {
-            "type": "boolean",
-            "description": "Verify SSL certificates (default: false for self-signed certs)",
-            "default": False,
-        }
+        # Note: port, use_ssl, verify_ssl are handled automatically by the server
+        # and not included in the tool schema to simplify N8N integration
 
         # Add parameters from OpenAPI spec
         for param in operation.get("parameters", []):

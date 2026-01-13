@@ -118,7 +118,7 @@
             "required": false,
             "description": "Severity of the alarm. The severity could range anywhere from 1 to 5. 1 = Critical, 2 = Trouble, 3 = Attention, 4 = Service Down, 5 = Clear .",
             "schema": {
-              "type": "integer",
+              "type": "string",
               "enum": [
                 "1",
                 "2",

@@ -268,8 +268,8 @@ class OpManagerMCPServer:
         # Get HTTP method for tool
         method = tool.get("_method", "get").upper()
 
-        # Build API parameters, filtering out metadata
-        api_params = self._build_api_params(arguments)
+        # Build API parameters using whitelist from tool schema
+        api_params = self._build_api_params(arguments, tool)
 
         logger.info(
             f"Executing tool: {name}",
@@ -353,30 +353,102 @@ class OpManagerMCPServer:
                 isError=True,
             )
 
-    def _build_api_params(self, arguments: dict[str, Any]) -> dict[str, Any]:
-        """Build API parameters from tool arguments.
+    def _build_api_params(
+        self,
+        arguments: dict[str, Any],
+        tool: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Build API parameters from tool arguments using whitelist approach.
 
-        Filters out credentials, metadata, and merges queryParams.
+        Only includes parameters that are defined in the tool's inputSchema.
+        Also performs type coercion based on the schema.
 
         Args:
             arguments: Raw tool arguments.
+            tool: Tool definition containing inputSchema.
 
         Returns:
-            Cleaned parameters for the API call.
+            Cleaned and validated parameters for the API call.
         """
         api_params: dict[str, Any] = {}
         query_params = arguments.get("queryParams", {})
 
-        # Only include valid OpManager API parameters
-        for key, value in arguments.items():
-            if key not in EXCLUDED_PARAMS and value is not None:
-                api_params[key] = value
+        # Get allowed parameters from tool's inputSchema (whitelist approach)
+        input_schema = tool.get("inputSchema", {})
+        properties = input_schema.get("properties", {})
 
-        # Merge queryParams object
+        # Only include parameters that are defined in the schema
+        for key, value in arguments.items():
+            # Skip if value is None
+            if value is None:
+                continue
+
+            # Skip if not in schema (metadata parameters like tool, toolCallId, etc.)
+            if key not in properties:
+                continue
+
+            # Skip credential/connection params (handled separately)
+            if key in EXCLUDED_PARAMS:
+                continue
+
+            # Coerce type based on schema
+            schema_info = properties.get(key, {})
+            coerced_value = self._coerce_type(value, schema_info)
+            api_params[key] = coerced_value
+
+        # Merge queryParams object (but also validate against schema)
         if isinstance(query_params, dict):
-            api_params.update(query_params)
+            for key, value in query_params.items():
+                if value is not None and key in properties:
+                    schema_info = properties.get(key, {})
+                    api_params[key] = self._coerce_type(value, schema_info)
 
         return api_params
+
+    def _coerce_type(self, value: Any, schema_info: dict[str, Any]) -> Any:
+        """Coerce value to the expected type based on schema.
+
+        Args:
+            value: The value to coerce.
+            schema_info: Schema information containing type and enum.
+
+        Returns:
+            Coerced value.
+        """
+        expected_type = schema_info.get("type", "string")
+        enum_values = schema_info.get("enum", [])
+
+        # If there's an enum, check if the value matches (as string)
+        if enum_values:
+            str_value = str(value)
+            if str_value in enum_values:
+                return str_value
+            # Try to find a matching enum value
+            for enum_val in enum_values:
+                if str(enum_val) == str_value:
+                    return enum_val
+
+        # Coerce based on expected type
+        if expected_type == "string":
+            return str(value)
+        elif expected_type == "integer":
+            try:
+                return int(value)
+            except (ValueError, TypeError):
+                return value
+        elif expected_type == "number":
+            try:
+                return float(value)
+            except (ValueError, TypeError):
+                return value
+        elif expected_type == "boolean":
+            if isinstance(value, bool):
+                return value
+            if isinstance(value, str):
+                return value.lower() in ("true", "1", "yes")
+            return bool(value)
+
+        return value
 
     def _get_path_for_tool(self, tool_name: str) -> str | None:
         """Get API path for a tool by matching against OpenAPI spec.
