@@ -57,6 +57,9 @@ EXCLUDED_PARAMS: frozenset[str] = frozenset(
         "tool",
         "toolName",
         "tool_name",
+        "deviceName",  # Exclude deviceName from auto-passing (use only when explicitly needed)
+        "prompt",      # Exclude prompt text
+        "metadata",    # Exclude metadata object
         # Other potential metadata
         "requestId",
         "request_id",
@@ -273,7 +276,13 @@ class OpManagerMCPServer:
 
         logger.info(
             f"Executing tool: {name}",
-            extra={"host": host, "path": path, "param_count": len(api_params)},
+            extra={
+                "host": host,
+                "path": path,
+                "method": method,
+                "param_count": len(api_params),
+                "api_params": api_params,
+            },
         )
 
         try:
@@ -294,7 +303,13 @@ class OpManagerMCPServer:
                     params=api_params if api_params else None,
                 )
 
-                logger.info(f"Successfully executed tool: {name}")
+                logger.info(
+                    f"Successfully executed tool: {name}",
+                    extra={
+                        "result_type": type(result).__name__,
+                        "result_length": len(result) if isinstance(result, (list, dict)) else 0,
+                    },
+                )
 
                 # Return success result per MCP spec
                 return types.CallToolResult(

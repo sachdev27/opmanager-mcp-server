@@ -163,9 +163,15 @@ class OpManagerAPIClient:
         client = await self._ensure_client()
         url = urljoin(self.base_url, path)
 
-        self._logger.debug(
+        self._logger.info(
             f"Executing {method} {path}",
-            extra={"params": params, "has_body": body is not None},
+            extra={
+                "url": url,
+                "params": params,
+                "has_body": body is not None,
+                "protocol": "https" if self.use_https else "http",
+                "port": self.port,
+            },
         )
 
         last_error: Exception | None = None
@@ -290,16 +296,24 @@ class OpManagerAPIClient:
         # Parse successful response
         try:
             data = response.json()
-            self._logger.debug(
+            self._logger.info(
                 "Request successful",
-                extra={"status_code": response.status_code},
+                extra={
+                    "status_code": response.status_code,
+                    "response_type": type(data).__name__,
+                    "response_size": len(data) if isinstance(data, (list, dict)) else 0,
+                },
             )
             return data
         except Exception as e:
             # If response is not JSON, return as text
             self._logger.warning(
                 f"Response is not JSON: {e}",
-                extra={"content_type": response.headers.get("content-type")},
+                extra={
+                    "content_type": response.headers.get("content-type"),
+                    "response_text_length": len(response.text),
+                    "response_preview": response.text[:200] if response.text else "(empty)",
+                },
             )
             return {"raw_response": response.text}
 
